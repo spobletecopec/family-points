@@ -1,4 +1,4 @@
-/* Mobile-first UI */
+/* Mobile-first UI with bigger tap targets */
 :root{
   --bg:#ffffff; --fg:#0f172a; --muted:#64748b; --border:#e2e8f0;
   --brand:#2563eb; --brand-fg:#ffffff; --danger:#ef4444;
@@ -12,19 +12,23 @@ h1{ font-size: clamp(20px, 3.5vw, 28px); margin:0 0 4px 0; }
 .subtitle{ color:var(--muted); margin:0; }
 header{ border-bottom:1px solid var(--border); background:#fff; position:sticky; top:0; z-index:10; }
 .tabs{ position:sticky; top:66px; background:#fff; z-index:9; display:flex; gap:8px; padding-top:8px; padding-bottom:8px; border-bottom:1px solid var(--border); overflow:auto; }
-.tab{ padding:10px 14px; border:1px solid var(--border); border-radius:999px; background:#fff; white-space:nowrap; font-weight:600; }
+.tab{ padding:12px 16px; border:1px solid var(--border); border-radius:999px; background:#fff; white-space:nowrap; font-weight:600; }
 .tab.active{ background:var(--brand); color:#fff; border-color:transparent; }
 main{ padding-top:12px; }
 .cards{ display:grid; grid-template-columns:1fr; gap:12px; }
-.card{ border:1px solid var(--border); border-radius: var(--radius); padding:14px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+.card{ border:1px solid var(--border); border-radius: var(--radius); padding:16px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
 .card.soft{ background:#f8fafc; }
 .actions{ display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
 .form{ display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:12px; }
+.form input, .form select{ padding:14px 16px; font-size:16px; }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; border:1px solid var(--border); padding:14px 16px; border-radius: var(--radius); background:#f8fafc; cursor:pointer; font-weight:600; }
+.btn.primary{ background:var(--brand); color:var(--brand-fg); border-color:transparent; }
+.btn.danger{ background:#fee2e2; color:#b91c1c; border-color:#fecaca; }
 .table-wrap{ width:100%; overflow:auto; border:1px solid var(--border); border-radius: var(--radius); background:#fff; }
-.table{ width:100%; border-collapse:collapse; font-size:15px; }
+.table{ width:100%; border-collapse:collapse; font-size:16px; }
 .table thead{ position:sticky; top:0; background:#f8fafc; }
-.table th, .table td{ padding:12px; border-bottom:1px solid var(--border); text-align:left; }
-.deleteBtn{ padding:6px 10px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+.table th, .table td{ padding:14px; border-bottom:1px solid var(--border); text-align:left; }
+.deleteBtn{ padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
 .details{ margin:12px 0; }
 footer{ border-top:1px solid var(--border); margin-top:16px; padding-bottom: max(env(safe-area-inset-bottom,0px), var(--space)); }
 /* Tabs visibility */
