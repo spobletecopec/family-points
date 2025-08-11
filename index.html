@@ -2,34 +2,34 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Planificador de Puntos Familiar</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header>
+  <header class="container">
     <h1>Planificador de Puntos Familiar</h1>
     <div class="names">
-      <label>Persona A:
-        <input id="nameA" type="text" placeholder="Sebastián" />
+      <label>Persona A
+        <input id="nameA" type="text" inputmode="text" placeholder="Sebastián" />
       </label>
-      <label>Persona B:
-        <input id="nameB" type="text" placeholder="Isa" />
+      <label>Persona B
+        <input id="nameB" type="text" inputmode="text" placeholder="Isa" />
       </label>
-      <button id="saveNames">Guardar nombres</button>
+      <button class="btn primary" id="saveNames">Guardar nombres</button>
     </div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="resumen">Resumen</button>
-    <button class="tab" data-tab="planificacion">Planificación</button>
-    <button class="tab" data-tab="registro">Registro</button>
-    <button class="tab" data-tab="config">Config/Backup</button>
+  <nav class="tabs container">
+    <button class="tab active" data-tab="resumen" aria-selected="true">Resumen</button>
+    <button class="tab" data-tab="planificacion" aria-selected="false">Planificación</button>
+    <button class="tab" data-tab="registro" aria-selected="false">Registro</button>
+    <button class="tab" data-tab="config" aria-selected="false">Config</button>
   </nav>
 
-  <main>
-    <section id="resumen" class="tabcontent active">
-      <h2>Resumen</h2>
+  <main class="container">
+    <section id="resumen" class="tabcontent active" aria-labelledby="Resumen">
+      <h2 class="sr-only">Resumen</h2>
       <div class="cards">
         <div class="card">
           <h3 id="cardAName">Persona A</h3>
@@ -42,14 +42,16 @@
           <p>¿Bloqueado (≤ -12)? <strong id="blockB">No</strong></p>
         </div>
       </div>
+
       <div class="actions">
-        <button id="exportCSV">Exportar CSV (Registro)</button>
-        <button id="clearAll">Borrar TODO (cuidado)</button>
+        <button class="btn" id="exportCSV">Exportar CSV</button>
+        <button class="btn danger" id="clearAll">Borrar TODO</button>
       </div>
-      <details>
+
+      <details class="details">
         <summary>Tarifas por 30 min (24/7)</summary>
         <div class="grid">
-          <div>
+          <div class="card soft">
             <h4>Lunes a Viernes</h4>
             <ul>
               <li>00:00–07:00 → 2</li>
@@ -59,7 +61,7 @@
               <li>20:30–24:00 → 2</li>
             </ul>
           </div>
-          <div>
+          <div class="card soft">
             <h4>Sábado y Domingo</h4>
             <ul>
               <li>00:00–08:00 → 1</li>
@@ -75,106 +77,111 @@
       </details>
     </section>
 
-    <section id="planificacion" class="tabcontent">
-      <h2>Planificación semanal</h2>
+    <section id="planificacion" class="tabcontent" aria-labelledby="Planificación">
+      <h2 class="sr-only">Planificación semanal</h2>
       <form id="planForm" class="form">
-        <label>Semana (Lunes):
+        <label>Semana (Lunes)
           <input type="date" id="planWeek" required />
         </label>
-        <label>Persona:
+        <label>Persona
           <select id="planWho">
             <option value="A">Persona A</option>
             <option value="B">Persona B</option>
           </select>
         </label>
-        <label>Día:
+        <label>Día
           <select id="planDay">
             <option>Lunes</option><option>Martes</option><option>Miércoles</option>
             <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
           </select>
         </label>
-        <label>Inicio aprox:
+        <label>Inicio aprox
           <input type="time" id="planStart" required />
         </label>
-        <label>Fin aprox:
+        <label>Fin aprox
           <input type="time" id="planEnd" required />
         </label>
-        <label>Tipo:
+        <label>Tipo
           <select id="planType">
             <option>Trabajo</option><option>Deporte</option><option>Social</option><option>Otro</option>
           </select>
         </label>
-        <label>Notas:
+        <label>Notas
           <input type="text" id="planNotes" placeholder="Opcional" />
         </label>
-        <button type="submit">Agregar</button>
+        <button type="submit" class="btn primary">Agregar</button>
       </form>
 
-      <table id="planTable">
-        <thead>
-          <tr>
-            <th>Semana (Lunes)</th><th>Persona</th><th>Día</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="planTable" class="table">
+          <thead>
+            <tr>
+              <th>Semana (Lunes)</th><th>Persona</th><th>Día</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <section id="registro" class="tabcontent">
-      <h2>Registro de salidas (cobra puntos)</h2>
+    <section id="registro" class="tabcontent" aria-labelledby="Registro">
+      <h2 class="sr-only">Registro</h2>
       <form id="logForm" class="form">
-        <label>Fecha:
+        <label>Fecha
           <input type="date" id="logDate" required />
         </label>
-        <label>Persona:
+        <label>Persona
           <select id="logWho">
             <option value="A">Persona A</option>
             <option value="B">Persona B</option>
           </select>
         </label>
-        <label>Inicio:
+        <label>Inicio
           <input type="time" id="logStart" required />
         </label>
-        <label>Fin:
+        <label>Fin
           <input type="time" id="logEnd" required />
         </label>
-        <label>Actividad:
+        <label>Actividad
           <input type="text" id="logActivity" placeholder="Ej: Fútbol / Nadar / Oficina tarde" />
         </label>
-        <label>Notas:
+        <label>Notas
           <input type="text" id="logNotes" placeholder="Opcional" />
         </label>
-        <button type="submit">Agregar</button>
+        <button type="submit" class="btn primary">Agregar</button>
       </form>
 
-      <table id="logTable">
-        <thead>
-          <tr>
-            <th>Fecha</th><th>Persona</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="logTable" class="table">
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Persona</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <section id="config" class="tabcontent">
-      <h2>Config / Backup</h2>
-      <div class="form">
-        <label>Límite de deuda (bloqueo): 
+    <section id="config" class="tabcontent" aria-labelledby="Config">
+      <h2 class="sr-only">Config</h2>
+      <form class="form">
+        <label>Límite de deuda (bloqueo)
           <input type="number" id="limitDebt" value="-12" step="1" />
         </label>
-        <button id="saveLimit">Guardar límite</button>
-      </div>
+        <button type="button" class="btn" id="saveLimit">Guardar límite</button>
+      </form>
+
       <div class="form">
-        <button id="backupJSON">Exportar backup (JSON)</button>
-        <label>Importar backup (JSON):
+        <button class="btn" id="backupJSON">Exportar backup (JSON)</button>
+        <label>Importar backup (JSON)
           <input type="file" id="restoreJSON" accept="application/json" />
         </label>
       </div>
     </section>
   </main>
 
-  <footer>
+  <footer class="container">
     <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale</small>
   </footer>
 
