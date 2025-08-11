@@ -1,4 +1,4 @@
-// Robust JS with null checks and defensive event handling
+// v2.2 robust app
 const LS = { plan:"fp_plan", log:"fp_log" };
 const NAMES = { A:"Sebastián", B:"Isa" };
 
@@ -122,41 +122,40 @@ function exportCSV(){
 }
 
 function initEvents(){
-  // Tabs
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click", (ev)=>{
     ev.preventDefault(); switchTab(btn.dataset.tab);
   }));
 
-  // Plan form
   const planForm=document.getElementById("planForm");
   if(planForm){
     planForm.addEventListener("submit",(e)=>{
       e.preventDefault();
       const row={
-        who:document.getElementById("planWho").value,
-        date:document.getElementById("planDate").value,
-        start:document.getElementById("planStart").value,
-        end:document.getElementById("planEnd").value,
-        type:document.getElementById("planType").value,
-        notes:document.getElementById("planNotes").value
+        who:document.getElementById("planWho")?.value || "A",
+        date:document.getElementById("planDate")?.value || "",
+        start:document.getElementById("planStart")?.value || "",
+        end:document.getElementById("planEnd")?.value || "",
+        type:document.getElementById("planType")?.value || "",
+        notes:document.getElementById("planNotes")?.value || ""
       };
+      if(!row.date || !row.start || !row.end){ return; }
       state.plan.push(row);
       saveState(); renderPlan();
       planForm.reset();
     });
   }
 
-  // Log form
   const logForm=document.getElementById("logForm");
   if(logForm){
     logForm.addEventListener("submit",(e)=>{
       e.preventDefault();
-      const date=document.getElementById("logDate").value;
-      const who=document.getElementById("logWho").value;
-      const start=document.getElementById("logStart").value;
-      const end=document.getElementById("logEnd").value;
-      const activity=document.getElementById("logActivity").value;
-      const notes=document.getElementById("logNotes").value;
+      const date=document.getElementById("logDate")?.value || "";
+      const who=document.getElementById("logWho")?.value || "A";
+      const start=document.getElementById("logStart")?.value || "";
+      const end=document.getElementById("logEnd")?.value || "";
+      const activity=document.getElementById("logActivity")?.value || "";
+      const notes=document.getElementById("logNotes")?.value || "";
+      if(!date || !start || !end){ return; }
       const points=computePoints(date,start,end);
       const row={ date, who, start, end, activity, notes, points };
       state.log.push(row);
@@ -165,17 +164,17 @@ function initEvents(){
     });
   }
 
-  // Delete delegation
   document.body.addEventListener("click",(e)=>{
     const btn=e.target.closest(".deleteBtn");
     if(!btn) return;
     const idx=parseInt(btn.dataset.idx,10);
     const type=btn.dataset.type;
-    if(type==="plan"){ state.plan.splice(idx,1); saveState(); renderPlan(); }
-    if(type==="log"){ state.log.splice(idx,1); saveState(); renderLog(); renderResumen(); }
+    if(Number.isFinite(idx)){
+      if(type==="plan"){ state.plan.splice(idx,1); saveState(); renderPlan(); }
+      if(type==="log"){ state.log.splice(idx,1); saveState(); renderLog(); renderResumen(); }
+    }
   });
 
-  // Export CSV
   const exportBtn=document.getElementById("exportCSV");
   if(exportBtn){ exportBtn.addEventListener("click", exportCSV); }
 }
@@ -185,6 +184,7 @@ function init(){
     loadState();
     renderPlan(); renderLog(); renderResumen();
     initEvents();
+    console.log("App iniciada", window.__APP_VERSION__ || "");
   }catch(e){
     console.error("init error", e);
   }

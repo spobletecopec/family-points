@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Planificador de Puntos Familiar</title>
+  <title>Planificador de Puntos Familiar — v2.2</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -72,9 +72,9 @@
 
     <section id="planificacion" class="tabcontent" aria-labelledby="Planificación">
       <h2 class="sr-only">Planificación semanal</h2>
-      <form id="planForm" class="form">
+      <form id="planForm" class="form" novalidate>
         <label>Persona
-          <select id="planWho">
+          <select id="planWho" required>
             <option value="A">Sebastián</option>
             <option value="B">Isa</option>
           </select>
@@ -113,9 +113,9 @@
 
     <section id="registro" class="tabcontent" aria-labelledby="Registro">
       <h2 class="sr-only">Registro</h2>
-      <form id="logForm" class="form">
+      <form id="logForm" class="form" novalidate>
         <label>Persona
-          <select id="logWho">
+          <select id="logWho" required>
             <option value="A">Sebastián</option>
             <option value="B">Isa</option>
           </select>
@@ -152,9 +152,10 @@
   </main>
 
   <footer class="container">
-    <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale</small>
+    <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale • <strong>v2.2</strong></small>
   </footer>
 
+  <script>window.__APP_VERSION__ = "v2.2";</script>
   <script src="app.js"></script>
 </body>
 </html>
