@@ -2,54 +2,56 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Planificador de Puntos Familiar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Planificador de Puntos Familiar — v2.3</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2563eb" />
+  <!-- iOS PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Puntos Familiar">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-  <header>
+  <header class="container">
     <h1>Planificador de Puntos Familiar</h1>
-    <div class="names">
-      <label>Persona A:
-        <input id="nameA" type="text" placeholder="Sebastián" />
-      </label>
-      <label>Persona B:
-        <input id="nameB" type="text" placeholder="Isa" />
-      </label>
-      <button id="saveNames">Guardar nombres</button>
-    </div>
+    <p class="subtitle">Sebastián & Isa</p>
   </header>
 
-  <nav class="tabs">
-    <button class="tab active" data-tab="resumen">Resumen</button>
-    <button class="tab" data-tab="planificacion">Planificación</button>
-    <button class="tab" data-tab="registro">Registro</button>
-    <button class="tab" data-tab="config">Config/Backup</button>
+  <nav class="tabs container">
+    <button class="tab active" data-tab="resumen" aria-selected="true" type="button">Resumen</button>
+    <button class="tab" data-tab="planificacion" aria-selected="false" type="button">Planificación</button>
+    <button class="tab" data-tab="registro" aria-selected="false" type="button">Registro</button>
   </nav>
 
-  <main>
-    <section id="resumen" class="tabcontent active">
-      <h2>Resumen</h2>
+  <main class="container">
+    <section id="resumen" class="tabcontent active" aria-labelledby="Resumen">
+      <h2 class="sr-only">Resumen</h2>
       <div class="cards">
         <div class="card">
-          <h3 id="cardAName">Persona A</h3>
+          <h3>Sebastián</h3>
           <p>Total puntos: <strong id="totalA">0</strong></p>
-          <p>¿Bloqueado (≤ -12)? <strong id="blockA">No</strong></p>
         </div>
         <div class="card">
-          <h3 id="cardBName">Persona B</h3>
+          <h3>Isa</h3>
           <p>Total puntos: <strong id="totalB">0</strong></p>
-          <p>¿Bloqueado (≤ -12)? <strong id="blockB">No</strong></p>
         </div>
       </div>
-      <div class="actions">
-        <button id="exportCSV">Exportar CSV (Registro)</button>
-        <button id="clearAll">Borrar TODO (cuidado)</button>
+
+      <div class="leader card soft">
+        <h3>Marcador</h3>
+        <p id="leaderText">Aún no hay diferencia.</p>
       </div>
-      <details>
+
+      <div class="actions">
+        <button class="btn" id="exportCSV" type="button">Exportar CSV</button>
+      </div>
+
+      <details class="details">
         <summary>Tarifas por 30 min (24/7)</summary>
         <div class="grid">
-          <div>
+          <div class="card soft">
             <h4>Lunes a Viernes</h4>
             <ul>
               <li>00:00–07:00 → 2</li>
@@ -59,7 +61,7 @@
               <li>20:30–24:00 → 2</li>
             </ul>
           </div>
-          <div>
+          <div class="card soft">
             <h4>Sábado y Domingo</h4>
             <ul>
               <li>00:00–08:00 → 1</li>
@@ -75,109 +77,99 @@
       </details>
     </section>
 
-    <section id="planificacion" class="tabcontent">
-      <h2>Planificación semanal</h2>
-      <form id="planForm" class="form">
-        <label>Semana (Lunes):
-          <input type="date" id="planWeek" required />
-        </label>
-        <label>Persona:
-          <select id="planWho">
-            <option value="A">Persona A</option>
-            <option value="B">Persona B</option>
+    <section id="planificacion" class="tabcontent" aria-labelledby="Planificación">
+      <h2 class="sr-only">Planificación semanal</h2>
+      <form id="planForm" class="form" novalidate>
+        <label>Persona
+          <select id="planWho" required>
+            <option value="A">Sebastián</option>
+            <option value="B">Isa</option>
           </select>
         </label>
-        <label>Día:
-          <select id="planDay">
-            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
-            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
-          </select>
+        <label>Fecha
+          <input type="date" id="planDate" required />
         </label>
-        <label>Inicio aprox:
+        <label>Inicio aprox
           <input type="time" id="planStart" required />
         </label>
-        <label>Fin aprox:
+        <label>Fin aprox
           <input type="time" id="planEnd" required />
         </label>
-        <label>Tipo:
+        <label>Tipo
           <select id="planType">
             <option>Trabajo</option><option>Deporte</option><option>Social</option><option>Otro</option>
           </select>
         </label>
-        <label>Notas:
+        <label>Notas
           <input type="text" id="planNotes" placeholder="Opcional" />
         </label>
-        <button type="submit">Agregar</button>
+        <button type="submit" class="btn primary">Agregar</button>
       </form>
 
-      <table id="planTable">
-        <thead>
-          <tr>
-            <th>Semana (Lunes)</th><th>Persona</th><th>Día</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="planTable" class="table">
+          <thead>
+            <tr>
+              <th>Persona</th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </section>
 
-    <section id="registro" class="tabcontent">
-      <h2>Registro de salidas (cobra puntos)</h2>
-      <form id="logForm" class="form">
-        <label>Fecha:
-          <input type="date" id="logDate" required />
-        </label>
-        <label>Persona:
-          <select id="logWho">
-            <option value="A">Persona A</option>
-            <option value="B">Persona B</option>
+    <section id="registro" class="tabcontent" aria-labelledby="Registro">
+      <h2 class="sr-only">Registro</h2>
+      <form id="logForm" class="form" novalidate>
+        <label>Persona
+          <select id="logWho" required>
+            <option value="A">Sebastián</option>
+            <option value="B">Isa</option>
           </select>
         </label>
-        <label>Inicio:
+        <label>Fecha
+          <input type="date" id="logDate" required />
+        </label>
+        <label>Inicio
           <input type="time" id="logStart" required />
         </label>
-        <label>Fin:
+        <label>Fin
           <input type="time" id="logEnd" required />
         </label>
-        <label>Actividad:
+        <label>Actividad
           <input type="text" id="logActivity" placeholder="Ej: Fútbol / Nadar / Oficina tarde" />
         </label>
-        <label>Notas:
+        <label>Notas
           <input type="text" id="logNotes" placeholder="Opcional" />
         </label>
-        <button type="submit">Agregar</button>
+        <button type="submit" class="btn primary">Agregar</button>
       </form>
 
-      <table id="logTable">
-        <thead>
-          <tr>
-            <th>Fecha</th><th>Persona</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <section id="config" class="tabcontent">
-      <h2>Config / Backup</h2>
-      <div class="form">
-        <label>Límite de deuda (bloqueo): 
-          <input type="number" id="limitDebt" value="-12" step="1" />
-        </label>
-        <button id="saveLimit">Guardar límite</button>
-      </div>
-      <div class="form">
-        <button id="backupJSON">Exportar backup (JSON)</button>
-        <label>Importar backup (JSON):
-          <input type="file" id="restoreJSON" accept="application/json" />
-        </label>
+      <div class="table-wrap">
+        <table id="logTable" class="table">
+          <thead>
+            <tr>
+              <th>Persona</th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
   </main>
 
-  <footer>
-    <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale</small>
+  <footer class="container">
+    <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale • <strong>v2.3</strong></small>
   </footer>
 
+  <script>window.__APP_VERSION__ = "v2.3";</script>
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) { 
+      window.addEventListener('load', () => { 
+        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+      });
+    }
+  </script>
 </body>
 </html>
