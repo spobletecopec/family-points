@@ -9,22 +9,13 @@
 <body>
   <header class="container">
     <h1>Planificador de Puntos Familiar</h1>
-    <div class="names">
-      <label>Persona A
-        <input id="nameA" type="text" inputmode="text" placeholder="Sebastián" />
-      </label>
-      <label>Persona B
-        <input id="nameB" type="text" inputmode="text" placeholder="Isa" />
-      </label>
-      <button class="btn primary" id="saveNames">Guardar nombres</button>
-    </div>
+    <p class="subtitle">Sebastián & Isa</p>
   </header>
 
   <nav class="tabs container">
     <button class="tab active" data-tab="resumen" aria-selected="true">Resumen</button>
     <button class="tab" data-tab="planificacion" aria-selected="false">Planificación</button>
     <button class="tab" data-tab="registro" aria-selected="false">Registro</button>
-    <button class="tab" data-tab="config" aria-selected="false">Config</button>
   </nav>
 
   <main class="container">
@@ -32,20 +23,22 @@
       <h2 class="sr-only">Resumen</h2>
       <div class="cards">
         <div class="card">
-          <h3 id="cardAName">Persona A</h3>
+          <h3>Sebastián</h3>
           <p>Total puntos: <strong id="totalA">0</strong></p>
-          <p>¿Bloqueado (≤ -12)? <strong id="blockA">No</strong></p>
         </div>
         <div class="card">
-          <h3 id="cardBName">Persona B</h3>
+          <h3>Isa</h3>
           <p>Total puntos: <strong id="totalB">0</strong></p>
-          <p>¿Bloqueado (≤ -12)? <strong id="blockB">No</strong></p>
         </div>
+      </div>
+
+      <div class="leader card soft">
+        <h3>Marcador</h3>
+        <p id="leaderText">Aún no hay diferencia.</p>
       </div>
 
       <div class="actions">
         <button class="btn" id="exportCSV">Exportar CSV</button>
-        <button class="btn danger" id="clearAll">Borrar TODO</button>
       </div>
 
       <details class="details">
@@ -80,20 +73,14 @@
     <section id="planificacion" class="tabcontent" aria-labelledby="Planificación">
       <h2 class="sr-only">Planificación semanal</h2>
       <form id="planForm" class="form">
-        <label>Semana (Lunes)
-          <input type="date" id="planWeek" required />
-        </label>
         <label>Persona
           <select id="planWho">
-            <option value="A">Persona A</option>
-            <option value="B">Persona B</option>
+            <option value="A">Sebastián</option>
+            <option value="B">Isa</option>
           </select>
         </label>
-        <label>Día
-          <select id="planDay">
-            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
-            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
-          </select>
+        <label>Fecha
+          <input type="date" id="planDate" required />
         </label>
         <label>Inicio aprox
           <input type="time" id="planStart" required />
@@ -116,7 +103,7 @@
         <table id="planTable" class="table">
           <thead>
             <tr>
-              <th>Semana (Lunes)</th><th>Persona</th><th>Día</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
+              <th>Persona</th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -127,14 +114,14 @@
     <section id="registro" class="tabcontent" aria-labelledby="Registro">
       <h2 class="sr-only">Registro</h2>
       <form id="logForm" class="form">
-        <label>Fecha
-          <input type="date" id="logDate" required />
-        </label>
         <label>Persona
           <select id="logWho">
-            <option value="A">Persona A</option>
-            <option value="B">Persona B</option>
+            <option value="A">Sebastián</option>
+            <option value="B">Isa</option>
           </select>
+        </label>
+        <label>Fecha
+          <input type="date" id="logDate" required />
         </label>
         <label>Inicio
           <input type="time" id="logStart" required />
@@ -155,28 +142,11 @@
         <table id="logTable" class="table">
           <thead>
             <tr>
-              <th>Fecha</th><th>Persona</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
+              <th>Persona</th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Actividad</th><th>Notas</th><th>Puntos</th><th></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
-      </div>
-    </section>
-
-    <section id="config" class="tabcontent" aria-labelledby="Config">
-      <h2 class="sr-only">Config</h2>
-      <form class="form">
-        <label>Límite de deuda (bloqueo)
-          <input type="number" id="limitDebt" value="-12" step="1" />
-        </label>
-        <button type="button" class="btn" id="saveLimit">Guardar límite</button>
-      </form>
-
-      <div class="form">
-        <button class="btn" id="backupJSON">Exportar backup (JSON)</button>
-        <label>Importar backup (JSON)
-          <input type="file" id="restoreJSON" accept="application/json" />
-        </label>
       </div>
     </section>
   </main>

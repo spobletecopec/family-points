@@ -1,5 +1,6 @@
-// Local storage keys
-const LS = { names:"fp_names", limit:"fp_limit", plan:"fp_plan", log:"fp_log" };
+// State (fixed names, no config screen)
+const LS = { plan:"fp_plan", log:"fp_log" };
+const NAMES = { A:"Sebastián", B:"Isa" };
 
 // Tariffs per 30 min
 function pointsForSlot(dt){
@@ -22,12 +23,8 @@ function pointsForSlot(dt){
     return 1;                               // 20:30–24:00
   }
 }
-
-// Rounders
 function floorToHalfHour(d){ const r=new Date(d); r.setMinutes(r.getMinutes()-(r.getMinutes()%30),0,0); return r; }
 function ceilToHalfHour(d){ const r=new Date(d); if(r.getMinutes()%30!==0 || r.getSeconds()!==0 || r.getMilliseconds()!==0){ r.setMinutes(r.getMinutes()+(30-(r.getMinutes()%30)),0,0);} return r; }
-
-// Compute points by half-hour overlap
 function computePoints(dateStr,startStr,endStr){
   const start=new Date(dateStr+"T"+startStr);
   const end=new Date(dateStr+"T"+endStr);
@@ -46,39 +43,34 @@ function computePoints(dateStr,startStr,endStr){
   return total;
 }
 
-// State
-let state={ names:{A:"Sebastián",B:"Isa"}, limit:-12, plan:[], log:[] };
-function loadState(){ const n=localStorage.getItem(LS.names); const l=localStorage.getItem(LS.limit); const p=localStorage.getItem(LS.plan); const g=localStorage.getItem(LS.log); if(n) state.names=JSON.parse(n); if(l) state.limit=parseInt(l,10); if(p) state.plan=JSON.parse(p); if(g) state.log=JSON.parse(g); }
-function saveState(){ localStorage.setItem(LS.names, JSON.stringify(state.names)); localStorage.setItem(LS.limit, String(state.limit)); localStorage.setItem(LS.plan, JSON.stringify(state.plan)); localStorage.setItem(LS.log, JSON.stringify(state.log)); }
+// App state
+let state={ plan:[], log:[] };
+function loadState(){ const p=localStorage.getItem(LS.plan); const g=localStorage.getItem(LS.log); if(p) state.plan=JSON.parse(p); if(g) state.log=JSON.parse(g); }
+function saveState(){ localStorage.setItem(LS.plan, JSON.stringify(state.plan)); localStorage.setItem(LS.log, JSON.stringify(state.log)); }
 
-// UI helpers
+// Tabs
 function switchTab(id){
   document.querySelectorAll(".tab,.tabcontent").forEach(el=>el.classList.remove("active"));
   document.querySelector(`.tab[data-tab="${id}"]`).classList.add("active");
   document.querySelector(`.tab[data-tab="${id}"]`).setAttribute("aria-selected","true");
   document.getElementById(id).classList.add("active");
-  // Unselect others
   document.querySelectorAll(".tab").forEach(b=>{ if(b.dataset.tab!==id) b.setAttribute("aria-selected","false"); });
 }
 
-function renderNames(){
-  document.getElementById("nameA").value=state.names.A;
-  document.getElementById("nameB").value=state.names.B;
-  document.getElementById("cardAName").textContent=state.names.A;
-  document.getElementById("cardBName").textContent=state.names.B;
-  Array.from(document.querySelectorAll("#planWho option,#logWho option")).forEach(opt=>{
-    if (opt.value==="A") opt.textContent=state.names.A;
-    if (opt.value==="B") opt.textContent=state.names.B;
-  });
-}
-
+// Renders
 function renderResumen(){
   const totalA=state.log.filter(r=>r.who==="A").reduce((s,r)=>s+(r.points||0),0);
   const totalB=state.log.filter(r=>r.who==="B").reduce((s,r)=>s+(r.points||0),0);
   document.getElementById("totalA").textContent=totalA;
   document.getElementById("totalB").textContent=totalB;
-  document.getElementById("blockA").textContent=(totalA<=state.limit?"Sí":"No");
-  document.getElementById("blockB").textContent=(totalB<=state.limit?"Sí":"No");
+
+  let leaderText="Aún no hay diferencia.";
+  if(totalA>totalB){
+    leaderText = `${NAMES.A} va arriba por ${totalA-totalB} puntos.`;
+  }else if(totalB>totalA){
+    leaderText = `${NAMES.B} va arriba por ${totalB-totalA} puntos.`;
+  }
+  document.getElementById("leaderText").textContent = leaderText;
 }
 
 function renderPlan(){
@@ -87,9 +79,8 @@ function renderPlan(){
   state.plan.forEach((row, idx)=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`
-      <td data-label="Semana (Lunes)">${row.week}</td>
-      <td data-label="Persona">${row.who==="A"?state.names.A:state.names.B}</td>
-      <td data-label="Día">${row.day}</td>
+      <td data-label="Persona">${row.who==="A"?NAMES.A:NAMES.B}</td>
+      <td data-label="Fecha">${row.date}</td>
       <td data-label="Inicio">${row.start}</td>
       <td data-label="Fin">${row.end}</td>
       <td data-label="Tipo">${row.type}</td>
@@ -105,8 +96,8 @@ function renderLog(){
   state.log.forEach((row, idx)=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`
+      <td data-label="Persona">${row.who==="A"?NAMES.A:NAMES.B}</td>
       <td data-label="Fecha">${row.date}</td>
-      <td data-label="Persona">${row.who==="A"?state.names.A:state.names.B}</td>
       <td data-label="Inicio">${row.start}</td>
       <td data-label="Fin">${row.end}</td>
       <td data-label="Actividad">${row.activity||""}</td>
@@ -117,11 +108,10 @@ function renderLog(){
   });
 }
 
+// Export CSV
 function exportCSV(){
-  const rows=[["Fecha","Persona","Inicio","Fin","Actividad","Notas","Puntos"]];
-  state.log.forEach(r=>{
-    rows.push([r.date,(r.who==="A"?state.names.A:state.names.B),r.start,r.end,r.activity||"",r.notes||"",r.points||0]);
-  });
+  const rows=[["Persona","Fecha","Inicio","Fin","Actividad","Notas","Puntos"]];
+  state.log.forEach(r=>rows.push([r.who==="A"?NAMES.A:NAMES.B, r.date, r.start, r.end, r.activity||"", r.notes||"", r.points||0]));
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
   const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
   const url=URL.createObjectURL(blob);
@@ -130,20 +120,16 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
+// Events
 function initEvents(){
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click",()=>switchTab(btn.dataset.tab)));
-  document.getElementById("saveNames").addEventListener("click",()=>{
-    state.names.A=document.getElementById("nameA").value||"Persona A";
-    state.names.B=document.getElementById("nameB").value||"Persona B";
-    saveState(); renderNames(); renderLog(); renderPlan(); renderResumen();
-  });
 
+  // Plan form
   document.getElementById("planForm").addEventListener("submit",(e)=>{
     e.preventDefault();
     const row={
-      week:document.getElementById("planWeek").value,
       who:document.getElementById("planWho").value,
-      day:document.getElementById("planDay").value,
+      date:document.getElementById("planDate").value,
       start:document.getElementById("planStart").value,
       end:document.getElementById("planEnd").value,
       type:document.getElementById("planType").value,
@@ -154,6 +140,7 @@ function initEvents(){
     e.target.reset();
   });
 
+  // Log form
   document.getElementById("logForm").addEventListener("submit",(e)=>{
     e.preventDefault();
     const date=document.getElementById("logDate").value;
@@ -169,6 +156,7 @@ function initEvents(){
     e.target.reset();
   });
 
+  // Delete (delegation)
   document.body.addEventListener("click",(e)=>{
     const btn=e.target.closest(".deleteBtn");
     if(!btn) return;
@@ -178,52 +166,12 @@ function initEvents(){
     if(type==="log"){ state.log.splice(idx,1); saveState(); renderLog(); renderResumen(); }
   });
 
-  document.getElementById("saveLimit").addEventListener("click",()=>{
-    const v=parseInt(document.getElementById("limitDebt").value,10);
-    if(!Number.isNaN(v)){ state.limit=v; saveState(); renderResumen(); }
-  });
-
-  document.getElementById("backupJSON").addEventListener("click",()=>{
-    const data=JSON.stringify(state,null,2);
-    const blob=new Blob([data],{type:"application/json"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a"); a.href=url; a.download="backup_planificador.json"; a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  document.getElementById("restoreJSON").addEventListener("change",(e)=>{
-    const file=e.target.files[0]; if(!file) return;
-    const fr=new FileReader();
-    fr.onload=()=>{
-      try{
-        const data=JSON.parse(fr.result);
-        if(data && data.names && data.plan && data.log){
-          state=data; saveState();
-          document.getElementById("limitDebt").value=state.limit;
-          renderNames(); renderPlan(); renderLog(); renderResumen();
-        }else{ alert("Archivo inválido"); }
-      }catch{ alert("No se pudo importar el backup"); }
-    };
-    fr.readAsText(file);
-  });
-
   document.getElementById("exportCSV").addEventListener("click", exportCSV);
-
-  document.getElementById("clearAll").addEventListener("click",()=>{
-    if(confirm("¿Seguro que quieres borrar TODO?")){
-      state={ names:{A:"Sebastián",B:"Isa"}, limit:-12, plan:[], log:[] };
-      saveState();
-      document.getElementById("limitDebt").value=state.limit;
-      renderNames(); renderPlan(); renderLog(); renderResumen();
-    }
-  });
 }
 
 function init(){
   loadState();
-  renderNames(); renderPlan(); renderLog();
-  document.getElementById("limitDebt").value=state.limit;
-  renderResumen();
+  renderPlan(); renderLog(); renderResumen();
   initEvents();
 }
 document.addEventListener("DOMContentLoaded", init);
