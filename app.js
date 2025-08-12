@@ -1,5 +1,5 @@
-// v4.6.1 PWA + Supabase + fixes Add
-const VERSION = "v4.6.1";
+// v4.7 PWA + Supabase + UI/UX updates
+const VERSION = "v4.7";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
 // ---- Supabase config (rellena y sube) ----
@@ -69,6 +69,12 @@ function toDDMMYYYY(isoDate){
   const [y,m,d] = isoDate.split("-");
   return `${d}-${m}-${y}`;
 }
+function toHHMM(hms){
+  // Acepta "HH:MM" o "HH:MM:SS" y devuelve "HH:MM"
+  if(!hms) return "";
+  const parts = hms.split(":");
+  return parts[0].padStart(2,"0")+":"+parts[1].padStart(2,"0");
+}
 function initials(who){ return who==="A" ? "S" : "I"; }
 
 // UI helpers
@@ -81,6 +87,23 @@ function switchTab(id){
   tabBtn.classList.add("active"); tabBtn.setAttribute("aria-selected","true");
   tabContent.classList.add("active");
   document.querySelectorAll(".tab").forEach(b=>{ if(b.dataset.tab!==id) b.setAttribute("aria-selected","false"); });
+}
+
+// Build time options each 30 min
+function buildTimeOptions(selectEl, selectedValue){
+  selectEl.innerHTML = "";
+  for(let h=0; h<24; h++){
+    for(let m=0; m<60; m+=30){
+      const hh = String(h).padStart(2,"0");
+      const mm = String(m).padStart(2,"0");
+      const val = `${hh}:${mm}`;
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = val;
+      if(selectedValue && selectedValue.startsWith(val)){ opt.selected = true; }
+      selectEl.appendChild(opt);
+    }
+  }
 }
 
 function renderResumen(){
@@ -102,8 +125,8 @@ function renderLog(){
     tr.innerHTML=`
       <td data-label="Persona"><span class="avatar">${initials(row.who)}</span></td>
       <td data-label="Fecha">${toDDMMYYYY(row.date)}</td>
-      <td data-label="Inicio">${row.start}</td>
-      <td data-label="Fin">${row.end}</td>
+      <td data-label="Inicio">${toHHMM(row.start)}</td>
+      <td data-label="Fin">${toHHMM(row.end)}</td>
       <td data-label="Actividad">${row.activity||""}</td>
       <td data-label="Puntos">${row.points||0}</td>
       <td class="actionBtns">
@@ -159,7 +182,6 @@ async function addLog(row){
   try{
     const { error } = await supabaseClient.from('log').insert([ row ]);
     if(error){ throw error; }
-    // Realtime actualizará la UI
   }catch(err){
     console.error(err);
     alert("No se pudo guardar: " + (err.message||err));
@@ -168,12 +190,17 @@ async function addLog(row){
 
 async function delLog(id){
   if(!hasSupabaseConfig()){ alert("Faltan las credenciales de Supabase."); return; }
+  // Optimista + rollback
+  const idx = state.log.findIndex(r=>r.id===id);
+  let backup = null;
+  if(idx>-1){ backup = state.log[idx]; state.log.splice(idx,1); renderLog(); renderResumen(); }
   try{
     const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
     if(error){ throw error; }
   }catch(err){
     console.error(err);
     alert("No se pudo eliminar: " + (err.message||err));
+    if(backup){ state.log.splice(idx,0,backup); renderLog(); renderResumen(); }
   }
 }
 
@@ -181,25 +208,31 @@ async function delLog(id){
 function copyToForm(row){
   qs("#logWho").value = row.who;
   qs("#logDate").value = row.date;
-  qs("#logStart").value = row.start;
-  qs("#logEnd").value = row.end;
+  qs("#logStart").value = toHHMM(row.start);
+  qs("#logEnd").value = toHHMM(row.end);
   qs("#logActivity").value = row.activity || "";
   switchTab("registro");
 }
 
-// Force update (clear caches + reload)
-async function forceUpdate(){
-  try{
-    if('caches' in window){
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    if(navigator.serviceWorker){
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r=>r.unregister()));
-    }
-  }catch(e){ console.error(e); }
-  location.reload(true);
+// Defaults for form (now & +1h, rounded to 30m)
+function setDefaultDateTime(){
+  const now = new Date();
+  now.setSeconds(0,0);
+  const rounded = new Date(now);
+  const m = rounded.getMinutes();
+  rounded.setMinutes(m - (m%30), 0, 0);
+  const plus1 = new Date(rounded);
+  plus1.setMinutes(plus1.getMinutes()+60);
+
+  const yyyy = rounded.getFullYear();
+  const mm = String(rounded.getMonth()+1).padStart(2,"0");
+  const dd = String(rounded.getDate()).padStart(2,"0");
+  qs("#logDate").value = `${yyyy}-${mm}-${dd}`;
+
+  const startSel = qs("#logStart");
+  const endSel = qs("#logEnd");
+  buildTimeOptions(startSel, `${String(rounded.getHours()).padStart(2,"0")}:${String(rounded.getMinutes()).padStart(2,"0")}`);
+  buildTimeOptions(endSel, `${String(plus1.getHours()).padStart(2,"0")}:${String(plus1.getMinutes()).padStart(2,"0")}`);
 }
 
 // Init
@@ -207,10 +240,6 @@ function initEvents(){
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click", (ev)=>{
     ev.preventDefault(); switchTab(btn.dataset.tab);
   }));
-
-  // Force update
-  const fu = document.getElementById("forceUpdate");
-  if(fu){ fu.addEventListener("click", forceUpdate); }
 
   // Owner buttons
   const owner = localStorage.getItem(ownerKey);
@@ -278,7 +307,7 @@ function initEvents(){
     if(houseInput) houseInput.focus();
   });
 
-  // Log form submit (siempre agrega)
+  // Log form submit (agrega)
   const form = document.getElementById("logForm");
   const submitBtn = document.getElementById("submitBtn");
   form.addEventListener("submit", async (e)=>{
@@ -299,6 +328,7 @@ function initEvents(){
       submitBtn.disabled = true; submitBtn.textContent = "Guardando…";
       await addLog(row);
       form.reset();
+      setDefaultDateTime();
       const owner = localStorage.getItem(ownerKey) || "A";
       qs("#logWho").value = owner;
     }catch(err){
@@ -332,6 +362,11 @@ async function init(){
     console.warn("Configura SUPABASE_URL y SUPABASE_ANON_KEY en app.js");
   }
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Default options & values for mobile selects
+  buildTimeOptions(qs("#logStart"));
+  buildTimeOptions(qs("#logEnd"));
+  setDefaultDateTime();
 
   // Owner init
   const owner = localStorage.getItem(ownerKey);
