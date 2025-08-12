@@ -1,7 +1,7 @@
 {
   "name": "Planificador de Puntos Familiar",
   "short_name": "Puntos",
-  "description": "Planificación y registro de salidas con puntos por franjas horarias.",
+  "description": "Registro de salidas con puntos por franjas horarias.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Planificador de Puntos Familiar — v4.0</title>
+  <title>Planificador de Puntos Familiar — v4.2</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2563eb" />
@@ -21,12 +21,32 @@
     <h1>Planificador de Puntos Familiar</h1>
     <p class="subtitle">Sebastián & Isa</p>
 
-    <div class="household">
+    <div class="household" id="housePanel">
       <label>Código del hogar
         <input id="houseId" type="text" placeholder="p.ej. CASA-123" />
       </label>
       <button class="btn" id="joinHouse" type="button">Unirse/Crear</button>
       <small id="authInfo">Configura Supabase y únete a un hogar.</small>
+    </div>
+
+    <div class="household hidden" id="houseIndicator">
+      <div>
+        <strong id="houseLabel">Hogar: —</strong><br />
+        <small id="authInfo2">Conectado</small>
+      </div>
+      <button class="btn" id="changeHouse" type="button">Cambiar hogar</button>
+    </div>
+
+    <div class="ownerpref" id="ownerSetup">
+      <div class="owner-buttons">
+        <button class="btn" id="setOwnerA" type="button">Este es el iPhone de Sebastián</button>
+        <button class="btn" id="setOwnerB" type="button">Este es el iPhone de Isa</button>
+      </div>
+    </div>
+
+    <div class="ownerpref hidden" id="ownerIndicator">
+      <small>Teléfono de: <strong id="ownerName">—</strong></small>
+      <button class="btn" id="changeOwner" type="button">Cambiar</button>
     </div>
   </header>
 
@@ -90,6 +110,7 @@
     <section id="registro" class="tabcontent" aria-labelledby="Registro">
       <h2 class="sr-only">Registro</h2>
       <form id="logForm" class="form" novalidate>
+        <input type="hidden" id="editId" value="" />
         <label>Persona
           <select id="logWho" required>
             <option value="A">Sebastián</option>
@@ -111,7 +132,10 @@
         <label>Notas
           <input type="text" id="logNotes" placeholder="Opcional" />
         </label>
-        <button type="submit" class="btn primary">Agregar</button>
+        <div class="form-actions">
+          <button type="submit" class="btn primary" id="submitBtn">Agregar</button>
+          <button type="button" class="btn hidden" id="cancelEdit">Cancelar edición</button>
+        </div>
       </form>
 
       <div class="table-wrap">
@@ -128,10 +152,10 @@
   </main>
 
   <footer class="container">
-    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.0</strong></small>
+    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.2</strong></small>
   </footer>
 
-  <script>window.__APP_VERSION__ = "v4.0";</script>
+  <script>window.__APP_VERSION__ = "v4.2";</script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) { 
