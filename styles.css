@@ -32,7 +32,7 @@ main{ padding-top:12px; }
 .table thead{ position:sticky; top:0; background:#f8fafc; }
 .table th, .table td{ padding:14px; border-bottom:1px solid var(--border); text-align:left; }
 .actionBtns{ display:flex; gap:8px; flex-wrap:wrap; }
-.deleteBtn, .editBtn, .copyBtn{ padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
+.deleteBtn, .copyBtn{ padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fff; cursor:pointer; }
 .details{ margin:12px 0; }
 .household{ display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:end; margin-top:8px; }
 .household label{ display:grid; gap:6px; font-size:14px; color:var(--muted); }
@@ -44,6 +44,13 @@ main{ padding-top:12px; }
 .hidden{ display:none !important; }
 #config .card{ margin-top: 12px; }
 footer{ border-top:1px solid var(--border); margin-top:16px; padding-bottom: max(env(safe-area-inset-bottom,0px), var(--space)); }
+/* Avatar inicial */
+.avatar{
+  width: 28px; height: 28px; border-radius: 999px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background: #e5edff; color:#1e3a8a; font-weight:700;
+  margin-right: 8px;
+}
 /* Tabs visibility */
 .tabcontent{ display:none; } .tabcontent.active{ display:block; }
 /* Responsive */
