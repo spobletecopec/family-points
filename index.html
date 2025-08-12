@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Planificador de Puntos Familiar — v2.3</title>
+  <title>Planificador de Puntos Familiar — v4.0</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2563eb" />
@@ -12,16 +12,26 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Puntos Familiar">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <header class="container">
     <h1>Planificador de Puntos Familiar</h1>
     <p class="subtitle">Sebastián & Isa</p>
+
+    <div class="household">
+      <label>Código del hogar
+        <input id="houseId" type="text" placeholder="p.ej. CASA-123" />
+      </label>
+      <button class="btn" id="joinHouse" type="button">Unirse/Crear</button>
+      <small id="authInfo">Configura Supabase y únete a un hogar.</small>
+    </div>
   </header>
 
   <nav class="tabs container">
     <button class="tab active" data-tab="resumen" aria-selected="true" type="button">Resumen</button>
-    <button class="tab" data-tab="planificacion" aria-selected="false" type="button">Planificación</button>
     <button class="tab" data-tab="registro" aria-selected="false" type="button">Registro</button>
   </nav>
 
@@ -41,7 +51,7 @@
 
       <div class="leader card soft">
         <h3>Marcador</h3>
-        <p id="leaderText">Aún no hay diferencia.</p>
+        <p id="leaderText">Ingresa o crea un hogar arriba para sincronizar.</p>
       </div>
 
       <div class="actions">
@@ -75,47 +85,6 @@
           </div>
         </div>
       </details>
-    </section>
-
-    <section id="planificacion" class="tabcontent" aria-labelledby="Planificación">
-      <h2 class="sr-only">Planificación semanal</h2>
-      <form id="planForm" class="form" novalidate>
-        <label>Persona
-          <select id="planWho" required>
-            <option value="A">Sebastián</option>
-            <option value="B">Isa</option>
-          </select>
-        </label>
-        <label>Fecha
-          <input type="date" id="planDate" required />
-        </label>
-        <label>Inicio aprox
-          <input type="time" id="planStart" required />
-        </label>
-        <label>Fin aprox
-          <input type="time" id="planEnd" required />
-        </label>
-        <label>Tipo
-          <select id="planType">
-            <option>Trabajo</option><option>Deporte</option><option>Social</option><option>Otro</option>
-          </select>
-        </label>
-        <label>Notas
-          <input type="text" id="planNotes" placeholder="Opcional" />
-        </label>
-        <button type="submit" class="btn primary">Agregar</button>
-      </form>
-
-      <div class="table-wrap">
-        <table id="planTable" class="table">
-          <thead>
-            <tr>
-              <th>Persona</th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Notas</th><th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
     </section>
 
     <section id="registro" class="tabcontent" aria-labelledby="Registro">
@@ -159,10 +128,10 @@
   </main>
 
   <footer class="container">
-    <small>Hecho para Sebastián e Isa • Bloques de 30 minutos • Solo descuenta puntos a quien sale • <strong>v2.3</strong></small>
+    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.0</strong></small>
   </footer>
 
-  <script>window.__APP_VERSION__ = "v2.3";</script>
+  <script>window.__APP_VERSION__ = "v4.0";</script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) { 

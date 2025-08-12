@@ -1,7 +1,18 @@
-// v2.3 PWA
-const LS = { plan:"fp_plan", log:"fp_log" };
+// v4.0 PWA + Supabase (online sync) — sin Planificación
+const VERSION = "v4.0";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
+// ---- Supabase config (rellena y sube) ----
+const SUPABASE_URL = "https://zhpharrgsammenkekaax.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpocGhhcnJnc2FtbWVua2VrYWF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NjQ1NjgsImV4cCI6MjA3MDU0MDU2OH0.waDyJ--XCuMHbEBYJ8T6qprZG_IBRfQFiVLptWCU7Fo";
+// ------------------------------------------
+
+let supabaseClient = null;
+let houseId = localStorage.getItem("fp_house") || "";
+const state = { log: [] };
+let logChannel = null;
+
+// Tarifa por 30 min
 function pointsForSlot(dt){
   const mins = dt.getHours()*60 + dt.getMinutes();
   const day = dt.getDay();
@@ -44,12 +55,10 @@ function computePoints(dateStr,startStr,endStr){
   }catch(e){ console.error("computePoints error", e); return 0; }
 }
 
-let state={ plan:[], log:[] };
-function loadState(){ try{ const p=localStorage.getItem(LS.plan); const g=localStorage.getItem(LS.log); if(p) state.plan=JSON.parse(p); if(g) state.log=JSON.parse(g);}catch(e){ console.warn("loadState", e); } }
-function saveState(){ try{ localStorage.setItem(LS.plan, JSON.stringify(state.plan)); localStorage.setItem(LS.log, JSON.stringify(state.log)); }catch(e){ console.warn("saveState", e); } }
-
+// UI helpers
+function qs(sel){ return document.querySelector(sel); }
 function switchTab(id){
-  const tabBtn=document.querySelector(`.tab[data-tab="${id}"]`);
+  const tabBtn=qs(`.tab[data-tab="${id}"]`);
   const tabContent=document.getElementById(id);
   if(!tabBtn || !tabContent) return;
   document.querySelectorAll(".tab,.tabcontent").forEach(el=>el.classList.remove("active"));
@@ -61,39 +70,18 @@ function switchTab(id){
 function renderResumen(){
   const totalA=state.log.filter(r=>r.who==="A").reduce((s,r)=>s+(r.points||0),0);
   const totalB=state.log.filter(r=>r.who==="B").reduce((s,r)=>s+(r.points||0),0);
-  const tA=document.getElementById("totalA"); const tB=document.getElementById("totalB"); const lead=document.getElementById("leaderText");
-  if(tA) tA.textContent=totalA;
-  if(tB) tB.textContent=totalB;
-  if(lead){
-    if(totalA>totalB){ lead.textContent=`${NAMES.A} va arriba por ${totalA-totalB} puntos.`; }
-    else if(totalB>totalA){ lead.textContent=`${NAMES.B} va arriba por ${totalB-totalA} puntos.`; }
-    else{ lead.textContent="Aún no hay diferencia."; }
-  }
-}
-
-function renderPlan(){
-  const tbody=document.querySelector("#planTable tbody");
-  if(!tbody) return;
-  tbody.innerHTML="";
-  state.plan.forEach((row, idx)=>{
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td data-label="Persona">${row.who==="A"?NAMES.A:NAMES.B}</td>
-      <td data-label="Fecha">${row.date}</td>
-      <td data-label="Inicio">${row.start}</td>
-      <td data-label="Fin">${row.end}</td>
-      <td data-label="Tipo">${row.type}</td>
-      <td data-label="Notas">${row.notes||""}</td>
-      <td><button class="deleteBtn" data-type="plan" data-idx="${idx}" type="button">Eliminar</button></td>`;
-    tbody.appendChild(tr);
-  });
+  qs("#totalA").textContent = totalA;
+  qs("#totalB").textContent = totalB;
+  const lead=qs("#leaderText");
+  if(totalA>totalB){ lead.textContent=`${NAMES.A} va arriba por ${totalA-totalB} puntos.`; }
+  else if(totalB>totalA){ lead.textContent=`${NAMES.B} va arriba por ${totalB-totalA} puntos.`; }
+  else{ lead.textContent="Aún no hay diferencia."; }
 }
 
 function renderLog(){
-  const tbody=document.querySelector("#logTable tbody");
-  if(!tbody) return;
+  const tbody=qs("#logTable tbody"); if(!tbody) return;
   tbody.innerHTML="";
-  state.log.forEach((row, idx)=>{
+  state.log.forEach((row)=>{
     const tr=document.createElement("tr");
     tr.innerHTML=`
       <td data-label="Persona">${row.who==="A"?NAMES.A:NAMES.B}</td>
@@ -103,89 +91,118 @@ function renderLog(){
       <td data-label="Actividad">${row.activity||""}</td>
       <td data-label="Notas">${row.notes||""}</td>
       <td data-label="Puntos">${row.points||0}</td>
-      <td><button class="deleteBtn" data-type="log" data-idx="${idx}" type="button">Eliminar</button></td>`;
+      <td><button class="deleteBtn" data-id="${row.id}" type="button">Eliminar</button></td>`;
     tbody.appendChild(tr);
   });
 }
 
 function exportCSV(){
-  try{
-    const rows=[["Persona","Fecha","Inicio","Fin","Actividad","Notas","Puntos"]];
-    state.log.forEach(r=>rows.push([r.who==="A"?NAMES.A:NAMES.B, r.date, r.start, r.end, r.activity||"", r.notes||"", r.points||0]));
-    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a"); a.href=url; a.download="registro_puntos.csv"; a.click();
-    URL.revokeObjectURL(url);
-  }catch(e){ console.error("exportCSV", e); }
+  const rows=[["Persona","Fecha","Inicio","Fin","Actividad","Notas","Puntos"]];
+  state.log.forEach(r=>rows.push([r.who==="A"?NAMES.A:NAMES.B, r.date, r.start, r.end, r.activity||"", r.notes||"", r.points||0]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="registro_puntos.csv"; a.click();
+  URL.revokeObjectURL(url);
 }
 
+// Supabase
+async function setupSupabase(){
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data, error } = await supabaseClient.auth.getSession();
+  if(error){ console.error(error); }
+  qs("#authInfo").textContent = "Supabase listo";
+}
+
+function sanitizeHouseId(s){
+  return (s||"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
+}
+
+async function loadLog(){
+  if(!houseId) return;
+  const { data, error } = await supabaseClient
+    .from('log')
+    .select('*')
+    .eq('house_id', houseId)
+    .order('date', { ascending: true })
+    .order('start', { ascending: true });
+  if(error){ console.error(error); return; }
+  state.log = data || [];
+  renderLog(); renderResumen();
+}
+
+function subscribeLog(){
+  if(logChannel){ supabaseClient.removeChannel(logChannel); logChannel=null; }
+  if(!houseId) return;
+  logChannel = supabaseClient
+    .channel('log-changes-' + houseId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'log', filter: `house_id=eq.${houseId}` }, payload => {
+      loadLog();
+    })
+    .subscribe();
+}
+
+async function addLog(row){
+  const { error } = await supabaseClient.from('log').insert([ row ]);
+  if(error){ console.error(error); }
+}
+async function delLog(id){
+  const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
+  if(error){ console.error(error); }
+}
+
+// Init
 function initEvents(){
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click", (ev)=>{
     ev.preventDefault(); switchTab(btn.dataset.tab);
   }));
 
-  const planForm=document.getElementById("planForm");
-  if(planForm){
-    planForm.addEventListener("submit",(e)=>{
-      e.preventDefault();
-      const row={
-        who:document.getElementById("planWho")?.value || "A",
-        date:document.getElementById("planDate")?.value || "",
-        start:document.getElementById("planStart")?.value || "",
-        end:document.getElementById("planEnd")?.value || "",
-        type:document.getElementById("planType")?.value || "",
-        notes:document.getElementById("planNotes")?.value || ""
-      };
-      if(!row.date || !row.start || !row.end){ return; }
-      state.plan.push(row);
-      saveState(); renderPlan();
-      planForm.reset();
-    });
-  }
+  qs("#joinHouse").addEventListener("click", ()=>{
+    const input = sanitizeHouseId(qs("#houseId").value);
+    if(!input){
+      const rnd = Math.random().toString(36).slice(2,8).toUpperCase();
+      houseId = "CASA-" + rnd;
+      qs("#houseId").value = houseId;
+    }else{
+      houseId = input;
+    }
+    localStorage.setItem("fp_house", houseId);
+    qs("#authInfo").textContent = "Hogar: " + houseId;
+    loadLog(); subscribeLog();
+  });
 
-  const logForm=document.getElementById("logForm");
-  if(logForm){
-    logForm.addEventListener("submit",(e)=>{
-      e.preventDefault();
-      const date=document.getElementById("logDate")?.value || "";
-      const who=document.getElementById("logWho")?.value || "A";
-      const start=document.getElementById("logStart")?.value || "";
-      const end=document.getElementById("logEnd")?.value || "";
-      const activity=document.getElementById("logActivity")?.value || "";
-      const notes=document.getElementById("logNotes")?.value || "";
-      if(!date || !start || !end){ return; }
-      const points=computePoints(date,start,end);
-      const row={ date, who, start, end, activity, notes, points };
-      state.log.push(row);
-      saveState(); renderLog(); renderResumen();
-      logForm.reset();
-    });
-  }
+  // Log form
+  qs("#logForm").addEventListener("submit",(e)=>{
+    e.preventDefault();
+    if(!houseId){ alert("Primero ingresa/crea el código del hogar."); return; }
+    const date=qs("#logDate").value;
+    const who=qs("#logWho").value;
+    const start=qs("#logStart").value;
+    const end=qs("#logEnd").value;
+    const activity=qs("#logActivity").value;
+    const notes=qs("#logNotes").value;
+    const points=computePoints(date,start,end);
+    const row={ id: crypto.randomUUID(), house_id: houseId, date, who, start, end, activity, notes, points, created_at: new Date().toISOString() };
+    addLog(row);
+    e.target.reset();
+  });
 
+  // Delete delegation
   document.body.addEventListener("click",(e)=>{
     const btn=e.target.closest(".deleteBtn");
     if(!btn) return;
-    const idx=parseInt(btn.dataset.idx,10);
-    const type=btn.dataset.type;
-    if(Number.isFinite(idx)){
-      if(type==="plan"){ state.plan.splice(idx,1); saveState(); renderPlan(); }
-      if(type==="log"){ state.log.splice(idx,1); saveState(); renderLog(); renderResumen(); }
-    }
+    const id = btn.dataset.id;
+    if(id){ delLog(id); }
   });
 
-  const exportBtn=document.getElementById("exportCSV");
-  if(exportBtn){ exportBtn.addEventListener("click", exportCSV); }
+  qs("#exportCSV").addEventListener("click", exportCSV);
 }
 
-function init(){
-  try{
-    loadState();
-    renderPlan(); renderLog(); renderResumen();
-    initEvents();
-    console.log("App iniciada", window.__APP_VERSION__ || "");
-  }catch(e){
-    console.error("init error", e);
-  }
+async function init(){
+  await setupSupabase();
+  if(houseId){ qs("#houseId").value = houseId; qs("#authInfo").textContent = "Hogar: " + houseId; loadLog(); subscribeLog(); }
+  else { qs("#authInfo").textContent = "Ingresa un código para sincronizar"; }
+  initEvents();
+  console.log("App iniciada", VERSION);
 }
 document.addEventListener("DOMContentLoaded", init);
