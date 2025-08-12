@@ -1,5 +1,5 @@
-// v4.6 PWA + Supabase + simplificaciones
-const VERSION = "v4.6";
+// v4.6.1 PWA + Supabase + fixes Add
+const VERSION = "v4.6.1";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
 // ---- Supabase config (rellena y sube) ----
@@ -65,7 +65,6 @@ function computePoints(dateStr,startStr,endStr){
 
 // Formatters
 function toDDMMYYYY(isoDate){
-  // isoDate = "yyyy-mm-dd"
   if(!isoDate) return "";
   const [y,m,d] = isoDate.split("-");
   return `${d}-${m}-${y}`;
@@ -115,61 +114,67 @@ function renderLog(){
   });
 }
 
-// Supabase
-async function setupSupabase(){
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data, error } = await supabaseClient.auth.getSession();
-  if(error){ console.error(error); }
-}
-
-function sanitizeHouseId(s){
-  return (s||"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
-}
-
-// Helpers de-dup
-function indexById(id){ return state.log.findIndex(r=>r.id===id); }
-function upsertRow(row){
-  const i = indexById(row.id);
-  if(i>-1){ state.log[i] = row; }
-  else { state.log.push(row); }
-  // Ordena por fecha + inicio
-  state.log.sort((a,b)=> (a.date.localeCompare(b.date) || a.start.localeCompare(b.start)));
-  renderLog(); renderResumen();
+// Supabase helpers
+function hasSupabaseConfig(){
+  return SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL !== "TU_SUPABASE_URL";
 }
 
 async function loadLog(){
-  if(!houseId) return;
+  if(!houseId || !hasSupabaseConfig()) return;
   const { data, error } = await supabaseClient
     .from('log')
     .select('*')
     .eq('house_id', houseId)
     .order('date', { ascending: true })
     .order('start', { ascending: true });
-  if(error){ console.error(error); return; }
+  if(error){ console.error(error); alert("Error al cargar: " + error.message); return; }
   state.log = data || [];
   renderLog(); renderResumen();
 }
 
 function subscribeLog(){
   if(logChannel){ supabaseClient.removeChannel(logChannel); logChannel=null; }
-  if(!houseId) return;
+  if(!houseId || !hasSupabaseConfig()) return;
   logChannel = supabaseClient
     .channel('log-changes-' + houseId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'log', filter: `house_id=eq.${houseId}` }, payload => {
-      if(payload.eventType === 'INSERT'){ upsertRow(payload.new); }
-      else if(payload.eventType === 'UPDATE'){ upsertRow(payload.new); }
-      else if(payload.eventType === 'DELETE'){ const i = indexById(payload.old.id); if(i>-1){ state.log.splice(i,1); renderLog(); renderResumen(); } }
+      if(payload.eventType === 'INSERT' || payload.eventType === 'UPDATE'){
+        const row = payload.new;
+        const i = state.log.findIndex(r=>r.id===row.id);
+        if(i>-1) state.log[i]=row; else state.log.push(row);
+      }else if(payload.eventType === 'DELETE'){
+        const i = state.log.findIndex(r=>r.id===payload.old.id);
+        if(i>-1) state.log.splice(i,1);
+      }
+      renderLog(); renderResumen();
     })
     .subscribe();
 }
 
 async function addLog(row){
-  const { error } = await supabaseClient.from('log').insert([ row ]);
-  if(error){ console.error(error); alert("Error al guardar: " + error.message); }
+  if(!hasSupabaseConfig()){
+    alert("Faltan las credenciales de Supabase en app.js");
+    return;
+  }
+  try{
+    const { error } = await supabaseClient.from('log').insert([ row ]);
+    if(error){ throw error; }
+    // Realtime actualizará la UI
+  }catch(err){
+    console.error(err);
+    alert("No se pudo guardar: " + (err.message||err));
+  }
 }
+
 async function delLog(id){
-  const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
-  if(error){ console.error(error); alert("Error al eliminar: " + error.message); }
+  if(!hasSupabaseConfig()){ alert("Faltan las credenciales de Supabase."); return; }
+  try{
+    const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
+    if(error){ throw error; }
+  }catch(err){
+    console.error(err);
+    alert("No se pudo eliminar: " + (err.message||err));
+  }
 }
 
 // Copy helper
@@ -182,11 +187,30 @@ function copyToForm(row){
   switchTab("registro");
 }
 
+// Force update (clear caches + reload)
+async function forceUpdate(){
+  try{
+    if('caches' in window){
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if(navigator.serviceWorker){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){ console.error(e); }
+  location.reload(true);
+}
+
 // Init
 function initEvents(){
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click", (ev)=>{
     ev.preventDefault(); switchTab(btn.dataset.tab);
   }));
+
+  // Force update
+  const fu = document.getElementById("forceUpdate");
+  if(fu){ fu.addEventListener("click", forceUpdate); }
 
   // Owner buttons
   const owner = localStorage.getItem(ownerKey);
@@ -255,20 +279,34 @@ function initEvents(){
   });
 
   // Log form submit (siempre agrega)
-  qs("#logForm").addEventListener("submit", async (e)=>{
+  const form = document.getElementById("logForm");
+  const submitBtn = document.getElementById("submitBtn");
+  form.addEventListener("submit", async (e)=>{
     e.preventDefault();
-    if(!houseId){ alert("Primero ingresa/crea el código del hogar en Configuración."); return; }
-    const date=qs("#logDate").value;
-    const who=qs("#logWho").value;
-    const start=qs("#logStart").value;
-    const end=qs("#logEnd").value;
-    const activity=qs("#logActivity").value;
-    const points=computePoints(date,start,end);
-    const row={ id: crypto.randomUUID(), house_id: houseId, date, who, start, end, activity, points, created_at: new Date().toISOString() };
-    await addLog(row);
-    qs("#logForm").reset();
-    const owner = localStorage.getItem(ownerKey) || "A";
-    qs("#logWho").value = owner;
+    try{
+      if(!houseId){
+        alert("Primero ingresa/crea el código del hogar en Configuración.");
+        switchTab("config");
+        return;
+      }
+      const date=qs("#logDate").value;
+      const who=qs("#logWho").value;
+      const start=qs("#logStart").value;
+      const end=qs("#logEnd").value;
+      const activity=qs("#logActivity").value;
+      const points=computePoints(date,start,end);
+      const row={ id: crypto.randomUUID(), house_id: houseId, date, who, start, end, activity, points, created_at: new Date().toISOString() };
+      submitBtn.disabled = true; submitBtn.textContent = "Guardando…";
+      await addLog(row);
+      form.reset();
+      const owner = localStorage.getItem(ownerKey) || "A";
+      qs("#logWho").value = owner;
+    }catch(err){
+      console.error(err);
+      alert("No se pudo agregar el registro.");
+    }finally{
+      submitBtn.disabled = false; submitBtn.textContent = "Agregar";
+    }
   });
 
   // Table delegation for copy/delete
@@ -290,6 +328,9 @@ function initEvents(){
 }
 
 async function init(){
+  if(!hasSupabaseConfig()){
+    console.warn("Configura SUPABASE_URL y SUPABASE_ANON_KEY en app.js");
+  }
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Owner init
