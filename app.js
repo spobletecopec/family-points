@@ -1,11 +1,10 @@
-// v4.3 PWA + Supabase + mejoras
-const VERSION = "v4.3";
+// v4.4 PWA + Supabase + fixes
+const VERSION = "v4.4";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
 // ---- Supabase config (rellena y sube) ----
 const SUPABASE_URL = "https://zhpharrgsammenkekaax.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpocGhhcnJnc2FtbWVua2VrYWF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NjQ1NjgsImV4cCI6MjA3MDU0MDU2OH0.waDyJ--XCuMHbEBYJ8T6qprZG_IBRfQFiVLptWCU7Fo";
-
 // ------------------------------------------
 
 let supabaseClient = null;
@@ -119,7 +118,6 @@ async function setupSupabase(){
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabaseClient.auth.getSession();
   if(error){ console.error(error); }
-  // No hay textos arriba; si necesitas, puedes usar la sección de config para mensajes
 }
 
 function sanitizeHouseId(s){
@@ -145,8 +143,7 @@ function subscribeLog(){
   logChannel = supabaseClient
     .channel('log-changes-' + houseId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'log', filter: `house_id=eq.${houseId}` }, payload => {
-      // Actualiza en función del tipo de evento para evitar refrescos completos
-      const rec = payload.new || payload.old;
+      // Actualiza coleccion local según evento
       if(payload.eventType === 'INSERT'){
         state.log.push(payload.new);
       }else if(payload.eventType === 'UPDATE'){
@@ -162,7 +159,7 @@ function subscribeLog(){
 }
 
 async function addLog(row){
-  // Optimista: agrega localmente mientras llega realtime
+  // Optimista
   state.log.push(row);
   renderLog(); renderResumen();
   const { error } = await supabaseClient.from('log').insert([ row ]);
@@ -173,7 +170,7 @@ async function updateLog(id, patch){
   if(error){ console.error(error); }
 }
 async function delLog(id){
-  // Optimista: elimina local al tiro
+  // Optimista
   const idx = state.log.findIndex(r=>r.id===id);
   if(idx>-1){
     state.log.splice(idx,1);
@@ -183,19 +180,7 @@ async function delLog(id){
   if(error){ console.error(error); }
 }
 
-// Owner UI
-function showOwnerIndicator(owner){
-  const name = owner==="A"?NAMES.A:NAMES.B;
-  qs("#ownerName").textContent = name;
-  qs("#ownerIndicator").classList.remove("hidden");
-  qs("#ownerSetup").classList.add("hidden");
-  qs("#logWho").value = owner;
-}
-function showOwnerSetup(){
-  qs("#ownerIndicator").classList.add("hidden");
-  qs("#ownerSetup").classList.remove("hidden");
-}
-
+// Copy & Edit helpers
 function setEditMode(row){
   qs("#editId").value = row.id;
   qs("#logWho").value = row.who;
@@ -208,7 +193,6 @@ function setEditMode(row){
   qs("#cancelEdit").classList.remove("hidden");
   switchTab("registro");
 }
-
 function clearEditMode(){
   qs("#editId").value = "";
   qs("#submitBtn").textContent = "Agregar";
@@ -217,9 +201,7 @@ function clearEditMode(){
   qs("#logForm").reset();
   qs("#logWho").value = owner;
 }
-
 function copyToForm(row){
-  // Copia todos los campos al formulario en modo "nuevo" (no edición)
   qs("#editId").value = "";
   qs("#logWho").value = row.who;
   qs("#logDate").value = row.date;
@@ -239,43 +221,69 @@ function initEvents(){
   }));
 
   // Owner buttons
-  qs("#setOwnerA").addEventListener("click", ()=>{
+  const ownerKeyLS = "fp_device_owner";
+  const owner = localStorage.getItem(ownerKeyLS);
+  if(owner){
+    const name = owner==="A"?NAMES.A:NAMES.B;
+    const ownerNameEl = document.getElementById("ownerName");
+    if(ownerNameEl){ ownerNameEl.textContent = name; }
+    const ind = document.getElementById("ownerIndicator");
+    const setup = document.getElementById("ownerSetup");
+    if(ind && setup){ ind.classList.remove("hidden"); setup.classList.add("hidden"); }
+  }
+  const btnA = document.getElementById("setOwnerA");
+  const btnB = document.getElementById("setOwnerB");
+  const changeOwner = document.getElementById("changeOwner");
+  if(btnA) btnA.addEventListener("click", ()=>{
     localStorage.setItem(ownerKey, "A");
-    showOwnerIndicator("A");
+    const ownerNameEl = document.getElementById("ownerName");
+    if(ownerNameEl) ownerNameEl.textContent = NAMES.A;
+    document.getElementById("ownerIndicator").classList.remove("hidden");
+    document.getElementById("ownerSetup").classList.add("hidden");
+    qs("#logWho").value = "A";
   });
-  qs("#setOwnerB").addEventListener("click", ()=>{
+  if(btnB) btnB.addEventListener("click", ()=>{
     localStorage.setItem(ownerKey, "B");
-    showOwnerIndicator("B");
+    const ownerNameEl = document.getElementById("ownerName");
+    if(ownerNameEl) ownerNameEl.textContent = NAMES.B;
+    document.getElementById("ownerIndicator").classList.remove("hidden");
+    document.getElementById("ownerSetup").classList.add("hidden");
+    qs("#logWho").value = "B";
   });
-  qs("#changeOwner").addEventListener("click", ()=>{
+  if(changeOwner) changeOwner.addEventListener("click", ()=>{
     localStorage.removeItem(ownerKey);
-    showOwnerSetup();
+    document.getElementById("ownerIndicator").classList.add("hidden");
+    document.getElementById("ownerSetup").classList.remove("hidden");
   });
 
-  // Household join / change (al final de la página)
-  qs("#joinHouse").addEventListener("click", ()=>{
-    const input = sanitizeHouseId(qs("#houseId").value);
+  // Household controls (bottom)
+  const joinBtn = document.getElementById("joinHouse");
+  const changeHouse = document.getElementById("changeHouse");
+  if(joinBtn) joinBtn.addEventListener("click", ()=>{
+    const houseInput = document.getElementById("houseId");
+    const input = (houseInput?.value || "").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
+    let newId = input;
     if(!input){
       const rnd = Math.random().toString(36).slice(2,8).toUpperCase();
-      houseId = "CASA-" + rnd;
-      qs("#houseId").value = houseId;
-    }else{
-      houseId = input;
+      newId = "CASA-" + rnd;
+      if(houseInput) houseInput.value = newId;
     }
+    houseId = newId;
     localStorage.setItem("fp_house", houseId);
-    qs("#houseLabel").textContent = "Hogar: " + houseId;
-    qs("#housePanel").classList.add("hidden");
-    qs("#houseIndicator").classList.remove("hidden");
+    const houseLabel = document.getElementById("houseLabel");
+    if(houseLabel) houseLabel.textContent = "Hogar: " + houseId;
+    document.getElementById("housePanel").classList.add("hidden");
+    document.getElementById("houseIndicator").classList.remove("hidden");
     loadLog(); subscribeLog();
   });
-
-  qs("#changeHouse").addEventListener("click", ()=>{
-    qs("#housePanel").classList.remove("hidden");
-    qs("#houseIndicator").classList.add("hidden");
-    qs("#houseId").focus();
+  if(changeHouse) changeHouse.addEventListener("click", ()=>{
+    document.getElementById("housePanel").classList.remove("hidden");
+    document.getElementById("houseIndicator").classList.add("hidden");
+    const houseInput = document.getElementById("houseId");
+    if(houseInput) houseInput.focus();
   });
 
-  // Log form submit (add or update)
+  // Log form submit
   qs("#logForm").addEventListener("submit", async (e)=>{
     e.preventDefault();
     if(!houseId){ alert("Primero ingresa/crea el código del hogar (abajo en Configuración)."); return; }
@@ -330,26 +338,35 @@ function initEvents(){
     }
   });
 
+  // CSV
   qs("#exportCSV").addEventListener("click", exportCSV);
 }
 
 async function init(){
-  // Setup Supabase
+  // Supabase
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Owner init
   const owner = localStorage.getItem(ownerKey);
-  if(owner){ showOwnerIndicator(owner); } else { showOwnerSetup(); }
+  if(owner){
+    const name = owner==="A"?NAMES.A:NAMES.B;
+    const ownerNameEl = document.getElementById("ownerName");
+    if(ownerNameEl) ownerNameEl.textContent = name;
+    document.getElementById("ownerIndicator").classList.remove("hidden");
+    document.getElementById("ownerSetup").classList.add("hidden");
+    qs("#logWho").value = owner;
+  }
 
   // Household auto-join
   if(houseId){
-    qs("#houseLabel").textContent = "Hogar: " + houseId;
-    qs("#housePanel").classList.add("hidden");
-    qs("#houseIndicator").classList.remove("hidden");
+    const houseLabel = document.getElementById("houseLabel");
+    if(houseLabel) houseLabel.textContent = "Hogar: " + houseId;
+    document.getElementById("housePanel").classList.add("hidden");
+    document.getElementById("houseIndicator").classList.remove("hidden");
     await loadLog(); subscribeLog();
   }else{
-    qs("#housePanel").classList.remove("hidden");
-    qs("#houseIndicator").classList.add("hidden");
+    document.getElementById("housePanel").classList.remove("hidden");
+    document.getElementById("houseIndicator").classList.add("hidden");
   }
 
   initEvents();

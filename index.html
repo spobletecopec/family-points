@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Planificador de Puntos Familiar — v4.3</title>
+  <title>Planificador de Puntos Familiar — v4.4</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2563eb" />
@@ -17,15 +17,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <header class="container">
+  <header class="container header">
     <h1>Planificador de Puntos Familiar</h1>
     <p class="subtitle">Sebastián & Isa</p>
+    <nav class="tabs">
+      <button class="tab active" data-tab="resumen" aria-selected="true" type="button">Resumen</button>
+      <button class="tab" data-tab="registro" aria-selected="false" type="button">Registro</button>
+    </nav>
   </header>
-
-  <nav class="tabs container">
-    <button class="tab active" data-tab="resumen" aria-selected="true" type="button">Resumen</button>
-    <button class="tab" data-tab="registro" aria-selected="false" type="button">Registro</button>
-  </nav>
 
   <main class="container">
     <section id="resumen" class="tabcontent active" aria-labelledby="Resumen">
@@ -157,10 +156,10 @@
   </main>
 
   <footer class="container">
-    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.3</strong></small>
+    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.4</strong></small>
   </footer>
 
-  <script>window.__APP_VERSION__ = "v4.3";</script>
+  <script>window.__APP_VERSION__ = "v4.4";</script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) { 
