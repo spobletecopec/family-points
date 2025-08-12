@@ -1,5 +1,5 @@
-// Cache-first service worker — v4.2
-const CACHE_NAME = 'family-points-cache-v4.2';
+// Cache-first service worker — v4.3
+const CACHE_NAME = 'family-points-cache-v4.3';
 const ASSETS = [
   './',
   './index.html',

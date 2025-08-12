@@ -1,10 +1,11 @@
-// v4.2 PWA + Supabase + one-tap owner
-const VERSION = "v4.2";
+// v4.3 PWA + Supabase + mejoras
+const VERSION = "v4.3";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
 // ---- Supabase config (rellena y sube) ----
 const SUPABASE_URL = "https://zhpharrgsammenkekaax.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpocGhhcnJnc2FtbWVua2VrYWF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5NjQ1NjgsImV4cCI6MjA3MDU0MDU2OH0.waDyJ--XCuMHbEBYJ8T6qprZG_IBRfQFiVLptWCU7Fo";
+
 // ------------------------------------------
 
 let supabaseClient = null;
@@ -95,6 +96,7 @@ function renderLog(){
       <td data-label="Notas">${row.notes||""}</td>
       <td data-label="Puntos">${row.points||0}</td>
       <td class="actionBtns">
+        <button class="copyBtn" data-id="${row.id}" type="button">Copiar</button>
         <button class="editBtn" data-id="${row.id}" type="button">Editar</button>
         <button class="deleteBtn" data-id="${row.id}" type="button">Eliminar</button>
       </td>`;
@@ -117,8 +119,7 @@ async function setupSupabase(){
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabaseClient.auth.getSession();
   if(error){ console.error(error); }
-  qs("#authInfo").textContent = "Supabase listo";
-  qs("#authInfo2").textContent = "Supabase listo";
+  // No hay textos arriba; si necesitas, puedes usar la sección de config para mensajes
 }
 
 function sanitizeHouseId(s){
@@ -144,12 +145,26 @@ function subscribeLog(){
   logChannel = supabaseClient
     .channel('log-changes-' + houseId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'log', filter: `house_id=eq.${houseId}` }, payload => {
-      loadLog();
+      // Actualiza en función del tipo de evento para evitar refrescos completos
+      const rec = payload.new || payload.old;
+      if(payload.eventType === 'INSERT'){
+        state.log.push(payload.new);
+      }else if(payload.eventType === 'UPDATE'){
+        const i = state.log.findIndex(r=>r.id===payload.new.id);
+        if(i>-1) state.log[i] = payload.new;
+      }else if(payload.eventType === 'DELETE'){
+        const i = state.log.findIndex(r=>r.id===payload.old.id);
+        if(i>-1) state.log.splice(i,1);
+      }
+      renderLog(); renderResumen();
     })
     .subscribe();
 }
 
 async function addLog(row){
+  // Optimista: agrega localmente mientras llega realtime
+  state.log.push(row);
+  renderLog(); renderResumen();
   const { error } = await supabaseClient.from('log').insert([ row ]);
   if(error){ console.error(error); }
 }
@@ -158,6 +173,12 @@ async function updateLog(id, patch){
   if(error){ console.error(error); }
 }
 async function delLog(id){
+  // Optimista: elimina local al tiro
+  const idx = state.log.findIndex(r=>r.id===id);
+  if(idx>-1){
+    state.log.splice(idx,1);
+    renderLog(); renderResumen();
+  }
   const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
   if(error){ console.error(error); }
 }
@@ -168,7 +189,6 @@ function showOwnerIndicator(owner){
   qs("#ownerName").textContent = name;
   qs("#ownerIndicator").classList.remove("hidden");
   qs("#ownerSetup").classList.add("hidden");
-  // Apply default
   qs("#logWho").value = owner;
 }
 function showOwnerSetup(){
@@ -198,13 +218,27 @@ function clearEditMode(){
   qs("#logWho").value = owner;
 }
 
+function copyToForm(row){
+  // Copia todos los campos al formulario en modo "nuevo" (no edición)
+  qs("#editId").value = "";
+  qs("#logWho").value = row.who;
+  qs("#logDate").value = row.date;
+  qs("#logStart").value = row.start;
+  qs("#logEnd").value = row.end;
+  qs("#logActivity").value = row.activity || "";
+  qs("#logNotes").value = row.notes || "";
+  qs("#submitBtn").textContent = "Agregar";
+  qs("#cancelEdit").classList.add("hidden");
+  switchTab("registro");
+}
+
 // Init
 function initEvents(){
   document.querySelectorAll(".tab").forEach(btn=>btn.addEventListener("click", (ev)=>{
     ev.preventDefault(); switchTab(btn.dataset.tab);
   }));
 
-  // Owner one-tap buttons
+  // Owner buttons
   qs("#setOwnerA").addEventListener("click", ()=>{
     localStorage.setItem(ownerKey, "A");
     showOwnerIndicator("A");
@@ -218,7 +252,7 @@ function initEvents(){
     showOwnerSetup();
   });
 
-  // Household join / change
+  // Household join / change (al final de la página)
   qs("#joinHouse").addEventListener("click", ()=>{
     const input = sanitizeHouseId(qs("#houseId").value);
     if(!input){
@@ -244,7 +278,7 @@ function initEvents(){
   // Log form submit (add or update)
   qs("#logForm").addEventListener("submit", async (e)=>{
     e.preventDefault();
-    if(!houseId){ alert("Primero ingresa/crea el código del hogar."); return; }
+    if(!houseId){ alert("Primero ingresa/crea el código del hogar (abajo en Configuración)."); return; }
     const date=qs("#logDate").value;
     const who=qs("#logWho").value;
     const start=qs("#logStart").value;
@@ -262,7 +296,6 @@ function initEvents(){
       const row={ id: crypto.randomUUID(), house_id: houseId, date, who, start, end, activity, notes, points, created_at: new Date().toISOString() };
       await addLog(row);
       qs("#logForm").reset();
-      // Re-apply owner default
       const owner = localStorage.getItem(ownerKey) || "A";
       qs("#logWho").value = owner;
     }
@@ -273,7 +306,7 @@ function initEvents(){
     clearEditMode();
   });
 
-  // Table delegation for edit/delete
+  // Table delegation for copy/edit/delete
   document.body.addEventListener("click",(e)=>{
     const del = e.target.closest(".deleteBtn");
     if(del){
@@ -286,6 +319,14 @@ function initEvents(){
       const id = edit.dataset.id;
       const row = state.log.find(r=>r.id===id);
       if(row){ setEditMode(row); }
+      return;
+    }
+    const copy = e.target.closest(".copyBtn");
+    if(copy){
+      const id = copy.dataset.id;
+      const row = state.log.find(r=>r.id===id);
+      if(row){ copyToForm(row); }
+      return;
     }
   });
 

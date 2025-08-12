@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Planificador de Puntos Familiar — v4.2</title>
+  <title>Planificador de Puntos Familiar — v4.3</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2563eb" />
@@ -20,34 +20,6 @@
   <header class="container">
     <h1>Planificador de Puntos Familiar</h1>
     <p class="subtitle">Sebastián & Isa</p>
-
-    <div class="household" id="housePanel">
-      <label>Código del hogar
-        <input id="houseId" type="text" placeholder="p.ej. CASA-123" />
-      </label>
-      <button class="btn" id="joinHouse" type="button">Unirse/Crear</button>
-      <small id="authInfo">Configura Supabase y únete a un hogar.</small>
-    </div>
-
-    <div class="household hidden" id="houseIndicator">
-      <div>
-        <strong id="houseLabel">Hogar: —</strong><br />
-        <small id="authInfo2">Conectado</small>
-      </div>
-      <button class="btn" id="changeHouse" type="button">Cambiar hogar</button>
-    </div>
-
-    <div class="ownerpref" id="ownerSetup">
-      <div class="owner-buttons">
-        <button class="btn" id="setOwnerA" type="button">Este es el iPhone de Sebastián</button>
-        <button class="btn" id="setOwnerB" type="button">Este es el iPhone de Isa</button>
-      </div>
-    </div>
-
-    <div class="ownerpref hidden" id="ownerIndicator">
-      <small>Teléfono de: <strong id="ownerName">—</strong></small>
-      <button class="btn" id="changeOwner" type="button">Cambiar</button>
-    </div>
   </header>
 
   <nav class="tabs container">
@@ -71,7 +43,7 @@
 
       <div class="leader card soft">
         <h3>Marcador</h3>
-        <p id="leaderText">Ingresa o crea un hogar arriba para sincronizar.</p>
+        <p id="leaderText">Ingresa o crea un hogar (al final de la página) para sincronizar.</p>
       </div>
 
       <div class="actions">
@@ -149,13 +121,46 @@
         </table>
       </div>
     </section>
+
+    <!-- Configuración al final de la página -->
+    <section id="config" class="config card soft">
+      <h3>Configuración</h3>
+
+      <div class="ownerpref" id="ownerSetup">
+        <div class="owner-buttons">
+          <button class="btn" id="setOwnerA" type="button">Este es el iPhone de Sebastián</button>
+          <button class="btn" id="setOwnerB" type="button">Este es el iPhone de Isa</button>
+        </div>
+      </div>
+
+      <div class="ownerpref hidden" id="ownerIndicator">
+        <small>Teléfono de: <strong id="ownerName">—</strong></small>
+        <button class="btn" id="changeOwner" type="button">Cambiar</button>
+      </div>
+
+      <div class="household" id="housePanel">
+        <label>Código del hogar
+          <input id="houseId" type="text" placeholder="p.ej. CASA-123" />
+        </label>
+        <button class="btn" id="joinHouse" type="button">Unirse/Crear</button>
+        <small id="authInfo">Configura Supabase y únete a un hogar.</small>
+      </div>
+
+      <div class="household hidden" id="houseIndicator">
+        <div>
+          <strong id="houseLabel">Hogar: —</strong><br />
+          <small id="authInfo2">Conectado</small>
+        </div>
+        <button class="btn" id="changeHouse" type="button">Cambiar hogar</button>
+      </div>
+    </section>
   </main>
 
   <footer class="container">
-    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.2</strong></small>
+    <small>Hecho para Sebastián e Isa • Supabase online • <strong>v4.3</strong></small>
   </footer>
 
-  <script>window.__APP_VERSION__ = "v4.2";</script>
+  <script>window.__APP_VERSION__ = "v4.3";</script>
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) { 
