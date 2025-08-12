@@ -1,5 +1,5 @@
-// v4.4 PWA + Supabase + fixes
-const VERSION = "v4.4";
+// v4.5 PWA + Supabase + fixes
+const VERSION = "v4.5";
 const NAMES = { A:"Sebastián", B:"Isa" };
 
 // ---- Supabase config (rellena y sube) ----
@@ -40,9 +40,15 @@ function floorToHalfHour(d){ const r=new Date(d); r.setMinutes(r.getMinutes()-(r
 function ceilToHalfHour(d){ const r=new Date(d); if(r.getMinutes()%30!==0 || r.getSeconds()!==0 || r.getMilliseconds()!==0){ r.setMinutes(r.getMinutes()+(30-(r.getMinutes()%30)),0,0);} return r; }
 function computePoints(dateStr,startStr,endStr){
   try{
-    const start=new Date(dateStr+"T"+startStr);
-    const end=new Date(dateStr+"T"+endStr);
-    if(!(start<end)) return 0;
+    let start=new Date(dateStr+"T"+startStr);
+    let end=new Date(dateStr+"T"+endStr);
+    // Cruce de medianoche: si fin <= inicio, asumimos fin al día siguiente
+    if(!(start<end)){
+      end = new Date(start);
+      const [eh, em] = endStr.split(":").map(Number);
+      end.setDate(end.getDate()+1);
+      end.setHours(eh||0, em||0, 0, 0);
+    }
     const minutes=(end-start)/60000;
     if(minutes<=15) return 0;
     const from=floorToHalfHour(start);
@@ -124,6 +130,14 @@ function sanitizeHouseId(s){
   return (s||"").trim().toUpperCase().replace(/[^A-Z0-9-]/g,"").slice(0,20);
 }
 
+// Helpers de-dup
+function indexById(id){ return state.log.findIndex(r=>r.id===id); }
+function upsertRow(row){
+  const i = indexById(row.id);
+  if(i>-1){ state.log[i] = row; }
+  else { state.log.push(row); }
+}
+
 async function loadLog(){
   if(!houseId) return;
   const { data, error } = await supabaseClient
@@ -143,14 +157,12 @@ function subscribeLog(){
   logChannel = supabaseClient
     .channel('log-changes-' + houseId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'log', filter: `house_id=eq.${houseId}` }, payload => {
-      // Actualiza coleccion local según evento
       if(payload.eventType === 'INSERT'){
-        state.log.push(payload.new);
+        upsertRow(payload.new);
       }else if(payload.eventType === 'UPDATE'){
-        const i = state.log.findIndex(r=>r.id===payload.new.id);
-        if(i>-1) state.log[i] = payload.new;
+        upsertRow(payload.new);
       }else if(payload.eventType === 'DELETE'){
-        const i = state.log.findIndex(r=>r.id===payload.old.id);
+        const i = indexById(payload.old.id);
         if(i>-1) state.log.splice(i,1);
       }
       renderLog(); renderResumen();
@@ -159,25 +171,20 @@ function subscribeLog(){
 }
 
 async function addLog(row){
-  // Optimista
-  state.log.push(row);
-  renderLog(); renderResumen();
+  // SIN inserción optimista para evitar duplicados: Realtime se encargará
   const { error } = await supabaseClient.from('log').insert([ row ]);
-  if(error){ console.error(error); }
+  if(error){ console.error(error); alert("Error al guardar: " + error.message); }
 }
 async function updateLog(id, patch){
   const { error } = await supabaseClient.from('log').update(patch).eq('id', id).eq('house_id', houseId);
-  if(error){ console.error(error); }
+  if(error){ console.error(error); alert("Error al editar: " + error.message); }
 }
 async function delLog(id){
-  // Optimista
-  const idx = state.log.findIndex(r=>r.id===id);
-  if(idx>-1){
-    state.log.splice(idx,1);
-    renderLog(); renderResumen();
-  }
+  // Eliminación optimista + Realtime confirmará
+  const idx = indexById(id);
+  if(idx>-1){ state.log.splice(idx,1); renderLog(); renderResumen(); }
   const { error } = await supabaseClient.from('log').delete().eq('id', id).eq('house_id', houseId);
-  if(error){ console.error(error); }
+  if(error){ console.error(error); alert("Error al eliminar: " + error.message); }
 }
 
 // Copy & Edit helpers
@@ -221,15 +228,15 @@ function initEvents(){
   }));
 
   // Owner buttons
-  const ownerKeyLS = "fp_device_owner";
-  const owner = localStorage.getItem(ownerKeyLS);
+  const owner = localStorage.getItem(ownerKey);
   if(owner){
     const name = owner==="A"?NAMES.A:NAMES.B;
     const ownerNameEl = document.getElementById("ownerName");
-    if(ownerNameEl){ ownerNameEl.textContent = name; }
-    const ind = document.getElementById("ownerIndicator");
-    const setup = document.getElementById("ownerSetup");
-    if(ind && setup){ ind.classList.remove("hidden"); setup.classList.add("hidden"); }
+    if(ownerNameEl) ownerNameEl.textContent = name;
+    document.getElementById("ownerIndicator").classList.remove("hidden");
+    document.getElementById("ownerSetup").classList.add("hidden");
+    const whoSel = document.getElementById("logWho");
+    if(whoSel) whoSel.value = owner;
   }
   const btnA = document.getElementById("setOwnerA");
   const btnB = document.getElementById("setOwnerB");
@@ -240,7 +247,8 @@ function initEvents(){
     if(ownerNameEl) ownerNameEl.textContent = NAMES.A;
     document.getElementById("ownerIndicator").classList.remove("hidden");
     document.getElementById("ownerSetup").classList.add("hidden");
-    qs("#logWho").value = "A";
+    const whoSel = document.getElementById("logWho");
+    if(whoSel) whoSel.value = "A";
   });
   if(btnB) btnB.addEventListener("click", ()=>{
     localStorage.setItem(ownerKey, "B");
@@ -248,7 +256,8 @@ function initEvents(){
     if(ownerNameEl) ownerNameEl.textContent = NAMES.B;
     document.getElementById("ownerIndicator").classList.remove("hidden");
     document.getElementById("ownerSetup").classList.add("hidden");
-    qs("#logWho").value = "B";
+    const whoSel = document.getElementById("logWho");
+    if(whoSel) whoSel.value = "B";
   });
   if(changeOwner) changeOwner.addEventListener("click", ()=>{
     localStorage.removeItem(ownerKey);
@@ -256,7 +265,7 @@ function initEvents(){
     document.getElementById("ownerSetup").classList.remove("hidden");
   });
 
-  // Household controls (bottom)
+  // Household controls
   const joinBtn = document.getElementById("joinHouse");
   const changeHouse = document.getElementById("changeHouse");
   if(joinBtn) joinBtn.addEventListener("click", ()=>{
@@ -286,7 +295,7 @@ function initEvents(){
   // Log form submit
   qs("#logForm").addEventListener("submit", async (e)=>{
     e.preventDefault();
-    if(!houseId){ alert("Primero ingresa/crea el código del hogar (abajo en Configuración)."); return; }
+    if(!houseId){ alert("Primero ingresa/crea el código del hogar en Configuración."); return; }
     const date=qs("#logDate").value;
     const who=qs("#logWho").value;
     const start=qs("#logStart").value;
@@ -354,7 +363,8 @@ async function init(){
     if(ownerNameEl) ownerNameEl.textContent = name;
     document.getElementById("ownerIndicator").classList.remove("hidden");
     document.getElementById("ownerSetup").classList.add("hidden");
-    qs("#logWho").value = owner;
+    const whoSel = document.getElementById("logWho");
+    if(whoSel) whoSel.value = owner;
   }
 
   // Household auto-join
